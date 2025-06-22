@@ -1,85 +1,79 @@
 DDoS 탐지·대응 시스템
-실시간 네트워크 트래픽을 분석해 DDoS 공격을 탐지·차단하고, 대시보드로 시각화까지 지원하는 end-to-end 솔루션
+FastAPI 백엔드와 Streamlit 대시보드, XGBoost 기반 머신러닝 모델을 결합한 엔드투엔드 DDoS 공격 탐지·대응 시스템입니다.
 
-📂 폴더 구조
-bash
-코드 복사
-.
-├── backend/
-│   ├── api/                        # FastAPI 엔드포인트
-│   ├── training/                   # 모델 학습 스크립트
-│   │   ├── train_binary_ddos_model.py
-│   │   └── ddos_multiclass_model.py
-│   ├── models/                     # 학습된 .pkl 파일
-│   ├── utils.py
-│   └── requirements.txt
-├── notebooks/                      # 실험·분석용 Jupyter 노트북
-├── streamlit_app.py                # 대시보드 실행 스크립트
-└── README.md
-🚀 주요 기능
-실시간 DDoS 탐지
+🔍 주요 기능
+실시간 패킷 캡처
+Scapy 기반 스니퍼로 네트워크 흐름을 수집 → 핵심 피처(Flow Duration, Total Fwd/Bwd Packets 등) 계산
 
-Binary 모델로 정상 vs 공격 구분
+이진 분류 (Normal vs Attack)
+XGBoost 모델로 정상/공격 여부 판별 (정확도 99.1%)
 
-Multiclass 모델로 공격 유형 식별
+다중 분류 (Attack Type)
+XGBoost + 언더샘플링/SMOTE → UDP, SYN, MSSQL 등 7종 공격 식별 (정확도 94.5%)
 
-자동 차단 연동
+리스크 스코어링 & 알림
+risk_score = confidence × log(flow_size) 계산 후, 임계치 초과 시 이메일 자동 발송
 
-위험도 임계치 초과 시 방화벽 API 호출
+지리 위치 시각화
+GeoLite2 DB로 IP→위치 변환 → pydeck 지도에 공격 지점 표시
 
-대시보드 시각화
+Streamlit 대시보드
+실시간 차트·메트릭·지도 제공, 랜덤 샘플 테스트 버튼으로 운영 환경 시뮬레이션
 
-Streamlit 기반 실시간 지표·지도·알림
+⚙️ 설치 & 실행
+레포지토리 클론
 
-로그 저장 & 보고서 생성
+git clone https://github.com/go5rae/ddos-detection.git
+cd ddos-detection
+가상환경 생성 및 활성화
 
-탐지 이벤트 DB 저장
+Windows PowerShell
 
-주간 요약 PDF 리포트 자동 발송
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+macOS/Linux
 
-🛠️ 설치 및 실행
-1. 클론 & 가상환경 설정
-bash
-코드 복사
-git clone https://github.com/YourUser/ddos-detection.git
-cd ddos-detection/backend
 python3 -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
+source venv/bin/activate
+의존성 설치
+
+pip install --upgrade pip
 pip install -r requirements.txt
-2. 데이터 준비
-CIC-DDoS-2019 데이터는 공식 사이트에서 다운로드
+설정 파일 복사
 
-압축 해제 후, backend/.env 파일에
-DATA_DIR=/path/to/datasets 형태로 경로 설정
+cp .env.example .env
+.env 에서 SMTP, DB 경로 등 환경 변수 입력
 
-3. 모델 학습
-# 이진 분류 모델 학습
-python backend/training/train_binary_ddos_model.py
+GeoLite2 DB 준비
+backend/data/GeoLite2-City.mmdb 파일을 다운받아 해당 경로에 넣기
 
-# 다중 분류 모델 학습
-python backend/training/ddos_multiclass_model.py
-학습이 완료되면 backend/models/ 폴더에 .pkl 파일이 생성됩니다.
+백엔드 서버 실행
 
-4. API 서버 실행
-uvicorn backend.api.main:app --reload
-POST /predict_ddos 등 예측·차단·로그용 엔드포인트 제공
+uvicorn main:app --reload
+대시보드 실행
 
-5. 대시보드 실행
 streamlit run streamlit_app.py
-브라우저에서 http://localhost:8501 로 접속
+📂 디렉터리 구조
+ddos-detection/
+├─ .github/                 # CI 설정
+├─ backend/
+│   ├─ data/                # GeoLite2 DB, 라벨 클래스
+│   ├─ training/            # 모델 학습 스크립트
+│   ├─ routers/             # FastAPI 라우터
+│   ├─ auth.py              # 인증
+│   ├─ database.py          # DB 연결
+│   ├─ geolocation.py       # IP→위치 변환
+│   ├─ predict.py           # 예측 API
+│   └─ recommendation.py    # 대응 가이드
+├─ realtime_sniffer.py      # 패킷 캡처 및 피처 계산
+├─ generate_dummy_logs.py   # 더미 로그 생성
+├─ streamlit_app.py         # Streamlit UI
+├─ requirements.txt         # 패키지 목록
+└─ README.md
+🧪 테스트
+pytest
+tests/test_predict.py 로 예측 API 검증
 
-📄 기타
-로그 DB: backend/logs.db (SQLite)
-
-환경 변수:
-
-DATA_DIR : 데이터셋 경로
-
-FIREWALL_API_URL, EMAIL_CREDENTIALS 등 .env에 설정
-
-CI/CD: GitHub Actions → Docker → GCP Cloud Run 배포
-
-🙏 기여 및 문의
-이슈 혹은 PR을 환영합니다.
-
-사용 중 문제 발생 시 issues 탭에 남겨 주세요.
+📝 라이선스
+MIT License
+자세한 내용은 LICENSE 파일 참고
