@@ -1,0 +1,40 @@
+# Python 관련
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 가상환경
+venv/
+env/
+.venv/
+
+# 환경 파일
+.env
+.env.*
+
+# 모델·캐시 파일
+*.pkl
+*.joblib
+
+# DB 파일
+*.db
+
+# 로그·리포트
+/reports/
+/logs/
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# 테스트 캐시
+.pytest_cache/
+.coverage
+
+# IDE 설정
+.vscode/
+.idea/
+
+# 기타 백업/OS 파일
+.DS_Store
+Thumbs.db
